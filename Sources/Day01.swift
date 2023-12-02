@@ -53,20 +53,20 @@ struct Day01: AdventDay {
     ]
 
     static func extractCalibrationValueP2(input: String) -> Int {
-        var inputToParse = input
         var digits: [String] = []
+        var index = input.startIndex
 
-        while let c = inputToParse.first {
-            defer { inputToParse = String(inputToParse.dropFirst()) }
+        while index < input.endIndex {
+            defer { index = input.index(after: index) }
+            let c = input[index]
             switch (c.isNumber, c.isLetter) {
             case (true, _):
                 digits.append("\(c)")
             case (_, true):
-                guard let potentialNumbers = numbers[String(c)] else {
-                    break
-                }
+                guard let potentialNumbers = numbers[String(c)] else { break }
                 for potential in potentialNumbers {
-                    if inputToParse.prefix(potential.count) == potential {
+                    guard let endIndex = input.index(index, offsetBy: potential.count, limitedBy: input.endIndex) else { break }
+                    if input[index ..< endIndex] == potential {
                         digits.append(String(numberMap[potential]!))
                         break
                     }
