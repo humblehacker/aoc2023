@@ -59,10 +59,10 @@ struct Day01: AdventDay {
         while index < input.endIndex {
             defer { index = input.index(after: index) }
             let c = input[index]
-            switch (c.isNumber, c.isLetter) {
-            case (true, _):
+            switch c.tokenType() {
+            case .number:
                 digits.append("\(c)")
-            case (_, true):
+            case .letter:
                 guard let potentialNumbers = numbers[String(c)] else { break }
                 for potential in potentialNumbers {
                     guard let endIndex = input.index(index, offsetBy: potential.count, limitedBy: input.endIndex) else { break }
@@ -71,7 +71,7 @@ struct Day01: AdventDay {
                         break
                     }
                 }
-            default:
+            case .other:
                 ()
             }
         }
@@ -84,5 +84,17 @@ struct Day01: AdventDay {
 
     static func extractCalibrationValuesP2(input: [String]) -> [Int] {
         input.map { extractCalibrationValueP2(input: $0) }
+    }
+}
+
+private enum TokenType {
+    case letter
+    case number
+    case other
+}
+
+private extension Character {
+    func tokenType() -> TokenType {
+        isLetter ? .letter : (isNumber ? .number : .other)
     }
 }
