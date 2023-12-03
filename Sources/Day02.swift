@@ -17,7 +17,26 @@ struct Day02: AdventDay {
     }
 
     func part2() -> Int {
-        0
+        let eligibleGames = games.map { game in
+            Game(
+                number: game.number,
+                records: [
+                    GameRecord(
+                        red: game.records.map { $0.red }.max() ?? 0,
+                        green: game.records.map { $0.green }.max() ?? 0,
+                        blue: game.records.map { $0.blue }.max() ?? 0
+                    ),
+                ]
+            )
+        }
+
+        let powers: [Int] = eligibleGames
+            .compactMap { $0.records.first }
+            .map { $0.red * $0.green * $0.blue }
+
+        let sum = powers.reduce(0, +)
+
+        return sum
     }
 }
 
