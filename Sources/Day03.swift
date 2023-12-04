@@ -5,21 +5,9 @@ import Parsing
 struct Day03: AdventDay {
     var data: String
 
-    var entities: [String] {
-        data.split(separator: "\n").map { String($0) }
-    }
-
-    var partNumbers: [PartNumber] {
-        Self.parsePartNumbers(input: entities)
-    }
-
-    var symbols: [Symbol] {
-        Self.parseSymbols(input: entities)
-    }
-
     static let symbolChars = "#$%&*+-/=@"
 
-    public static func parseSymbols(input: [String]) -> [Symbol] {
+    static func parseSymbols(input: [String]) -> [Symbol] {
         var result: [Symbol] = []
         var row = 0
         for line in input {
@@ -50,7 +38,7 @@ struct Day03: AdventDay {
                     }
                     number.append(String(c))
                 } else if let coord = coordinate {
-                    result.append(PartNumber(number: Int(number)!, coordinate: coord))
+                    result.append(PartNumber(Int(number)!, coordinate: coord))
                     number = ""
                     coordinate = nil
                 }
@@ -127,16 +115,37 @@ struct Day03: AdventDay {
     }
 
     func part2() -> Int {
-        return 0
+        let entities = data.split(separator: "\n").map { String($0) }
+        let partNumbers = Self.parsePartNumbers(input: entities)
+        let symbols = Self.parseSymbols(input: entities)
+        let symbolMap = Self.generateSymbolMap(symbols)
+
+        var adjacentNumbers: [Symbol: [PartNumber]] = [:]
+        for partNumber in partNumbers {
+            let coordinates = Self.coordinates(for: partNumber, maxX: entities.first!.count, maxY: entities.count)
+            let symbols = Self.symbols(adjacentTo: coordinates, in: symbolMap)
+            for symbol in symbols {
+                guard symbol.value == "*" else { continue }
+                adjacentNumbers[symbol, default: .init()].append(partNumber)
+            }
+        }
+
+        let result = adjacentNumbers
+            .values
+            .filter { $0.count == 2 }
+            .compactMap { $0.map { $0.number }.reduce(1, *) }
+            .reduce(0, +)
+
+        return result
     }
 }
 
-struct Coordinate: Equatable {
+struct Coordinate: Hashable, Equatable {
     let x: Int
     let y: Int
 }
 
-struct Symbol: Equatable {
+struct Symbol: Hashable, Equatable {
     let value: String
     let coordinate: Coordinate
 
