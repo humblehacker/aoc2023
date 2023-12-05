@@ -12,7 +12,20 @@ struct Day04: AdventDay {
     }
 
     func part2() -> Int {
-        return 0
+        let cards = try! CardsParser().parse(data)
+        var winMap: [Int: Int] = [:] // ID -> Count
+        for card in cards {
+            winMap[card.id,default:0] += 1
+            let winningCards = Self.calculateWinningCards(for: card, cards: cards)
+            guard !winningCards.isEmpty else { continue }
+            let winCount = winMap[card.id] ?? 0
+
+            for win in winningCards {
+                winMap[win.id, default: 0] += winCount
+            }
+        }
+
+        return winMap.values.reduce(0, +)
     }
 
     static func parseCard(input: String) throws -> Card {
@@ -26,6 +39,17 @@ struct Day04: AdventDay {
     static func calculatePoints(card: Card) -> Int {
         let matchingNumbers = Set(card.winningNumbers).intersection(card.ourNumbers)
         return Int(pow(Double(2), Double(matchingNumbers.count - 1)))
+    }
+
+    static func calculateMatches(card: Card) -> Int {
+        let matchingNumbers = Set(card.winningNumbers).intersection(card.ourNumbers)
+        return matchingNumbers.count
+    }
+
+    static func calculateWinningCards(for card: Card, cards: [Card]) -> [Card] {
+        let matchCount = Self.calculateMatches(card: card)
+        guard matchCount > 0 else { return [] }
+        return Array(cards[card.id ..< card.id + matchCount])
     }
 }
 
