@@ -11,8 +11,6 @@ struct Day05: AdventDay {
         almanac = try! AlmanacParser().parse(data)
     }
 
-    func part2() -> Int {
-        return 0
     func part1() throws -> Int {
         var locations: [Int] = []
         for seed in almanac.seeds {
@@ -20,6 +18,18 @@ struct Day05: AdventDay {
             locations.append(location)
         }
 
+        return locations.sorted().first ?? 0
+    }
+
+    func part2() throws -> Int {
+        var locations: [Int] = []
+        let seedRanges = almanac.seedRanges
+        for range in seedRanges {
+            for seed in range {
+                let location = almanac.seedLocation(seed)
+                locations.append(location)
+            }
+        }
         return locations.sorted().first ?? 0
     }
 }
@@ -30,6 +40,15 @@ struct Almanac: Equatable {
 }
 
 extension Almanac {
+    var seedRanges: [Range<Int>] {
+        stride(from: seeds.startIndex, to: seeds.endIndex, by: 2)
+            .map { index in
+                let startSeed = seeds[index]
+                let endSeed = seeds[index + 1]
+                return startSeed ..< startSeed + endSeed
+            }
+    }
+
     func seedLocation(_ seed: Int) -> Int {
         let soil = seedToSoil(seed)
         let fertilizer = soilToFertilizer(soil)

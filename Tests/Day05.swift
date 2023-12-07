@@ -99,6 +99,13 @@ final class Day05Tests: XCTestCase {
         XCTAssertNoDifference(expected, actual)
     }
 
+    func testSeedRanges() throws {
+        let almanac = Almanac(seeds: [79, 14, 55, 13], maps: [])
+        let actual = almanac.seedRanges
+        let expected = [79 ..< 93, 55 ..< 68]
+        XCTAssertNoDifference(expected, actual)
+    }
+
     func testPart1() throws {
         let challenge = Day05(data: testData)
         XCTAssertNoDifference(35, try challenge.part1())
@@ -106,6 +113,6 @@ final class Day05Tests: XCTestCase {
 
     func testPart2() throws {
         let challenge = Day05(data: testData)
-        XCTAssertNoDifference(0, challenge.part2())
+        XCTAssertNoDifference(46, try challenge.part2())
     }
 }
