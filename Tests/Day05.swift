@@ -51,10 +51,10 @@ final class Day05Tests: XCTestCase {
         let expected = Map(
             name: "fertilizer-to-water",
             entries: [
-                MapEntry(dstRange: 49 ..< 49 + 8, srcRange: 53 ..< 53 + 8),
-                MapEntry(dstRange: 0 ..< 0 + 42, srcRange: 11 ..< 11 + 42),
-                MapEntry(dstRange: 42 ..< 42 + 7, srcRange: 0 ..< 0 + 7),
-                MapEntry(dstRange: 57 ..< 57 + 4, srcRange: 7 ..< 7 + 4),
+                MapEntry(srcRange: 53 ..< 53 + 8, dstOffset: -4),
+                MapEntry(srcRange: 11 ..< 11 + 42, dstOffset: -11),
+                MapEntry(srcRange: 0 ..< 0 + 7, dstOffset: 42),
+                MapEntry(srcRange: 7 ..< 7 + 4, dstOffset: 50),
             ]
         )
         let actual = try MapParser().parse(input)
@@ -81,16 +81,16 @@ final class Day05Tests: XCTestCase {
                 Map(
                     name: "seed-to-soil",
                     entries: [
-                        MapEntry(dstRange: 50 ..< 50 + 2, srcRange: 98 ..< 98 + 2),
-                        MapEntry(dstRange: 52 ..< 52 + 48, srcRange: 50 ..< 50 + 48),
+                        MapEntry(srcRange: 98 ..< 98 + 2, dstOffset: -48),
+                        MapEntry(srcRange: 50 ..< 50 + 48, dstOffset: 2),
                     ]
                 ),
                 Map(
                     name: "soil-to-fertilizer",
                     entries: [
-                        MapEntry(dstRange: 0 ..< 0 + 37, srcRange: 15 ..< 15 + 37),
-                        MapEntry(dstRange: 37 ..< 37 + 2, srcRange: 52 ..< 52 + 2),
-                        MapEntry(dstRange: 39 ..< 39 + 15, srcRange: 0 ..< 0 + 15),
+                        MapEntry(srcRange: 15 ..< 15 + 37, dstOffset: -15),
+                        MapEntry(srcRange: 52 ..< 52 + 2, dstOffset: -15),
+                        MapEntry(srcRange: 0 ..< 0 + 15, dstOffset: 39),
                     ]
                 ),
             ]
@@ -106,13 +106,15 @@ final class Day05Tests: XCTestCase {
         XCTAssertNoDifference(expected, actual)
     }
 
-    func testPart1() throws {
-        let challenge = Day05(data: testData)
-        XCTAssertNoDifference(35, try challenge.part1())
+    func testPart1() async throws {
+        let actual = try await Day05(data: testData).part1()
+        let expected = 35
+        XCTAssertNoDifference(expected, actual)
     }
 
-    func testPart2() throws {
-        let challenge = Day05(data: testData)
-        XCTAssertNoDifference(46, try challenge.part2())
+    func testPart2() async throws {
+        let actual = try await Day05(data: testData).part2()
+        let expected = 46
+        XCTAssertNoDifference(expected, actual)
     }
 }

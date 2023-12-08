@@ -11,32 +11,67 @@ struct Day05: AdventDay {
         almanac = try! AlmanacParser().parse(data)
     }
 
-    func part1() throws -> Int {
-        var locations: [Int] = []
+    func part1() async throws -> Int {
+        var lowestLocation = Int.max
         for seed in almanac.seeds {
             let location = almanac.seedLocation(seed)
-            locations.append(location)
+            lowestLocation = min(lowestLocation, location)
         }
 
-        return locations.sorted().first ?? 0
+        return lowestLocation != Int.max ? lowestLocation : 0
     }
 
-    func part2() throws -> Int {
-        var locations: [Int] = []
+    func part2() async throws -> Int {
+        let batchSize = 10
         let seedRanges = almanac.seedRanges
-        for range in seedRanges {
-            for seed in range {
-                let location = almanac.seedLocation(seed)
-                locations.append(location)
+        var lowestLocation = Int.max
+
+        for batchStart in stride(from: seedRanges.startIndex, to: seedRanges.endIndex, by: batchSize) {
+            let batchEnd = min(batchStart + batchSize, seedRanges.endIndex)
+            let batchRanges = seedRanges[batchStart ..< batchEnd]
+
+            await withTaskGroup(of: Int.self) { group in
+                for range in batchRanges {
+                    group.addTask {
+                        range
+                            .map { almanac.seedLocation($0) }
+                            .min() ?? 0
+                    }
+                }
+
+                lowestLocation = await group.min() ?? 0
             }
         }
-        return locations.sorted().first ?? 0
+        return lowestLocation
     }
 }
 
 struct Almanac: Equatable {
     let seeds: [Int]
-    let maps: [Map]
+
+    var seedToSoil: Map!
+    var soilToFertilizer: Map!
+    var fertilizerToWater: Map!
+    var waterToLight: Map!
+    var lightToTemperature: Map!
+    var temperatureToHumidity: Map!
+    var humidityToLocation: Map!
+
+    init(seeds: [Int], maps: [Map]) {
+        self.seeds = seeds
+        for map in maps {
+            switch map.name {
+            case "seed-to-soil": seedToSoil = map
+            case "soil-to-fertilizer": soilToFertilizer = map
+            case "fertilizer-to-water": fertilizerToWater = map
+            case "water-to-light": waterToLight = map
+            case "light-to-temperature": lightToTemperature = map
+            case "temperature-to-humidity": temperatureToHumidity = map
+            case "humidity-to-location": humidityToLocation = map
+            default: fatalError()
+            }
+        }
+    }
 }
 
 extension Almanac {
@@ -49,84 +84,72 @@ extension Almanac {
             }
     }
 
+    @inline(never)
     func seedLocation(_ seed: Int) -> Int {
-        let soil = seedToSoil(seed)
-        let fertilizer = soilToFertilizer(soil)
-        let water = fertilizerToWater(fertilizer)
-        let light = waterToLight(water)
-        let temperature = lightToTemperature(light)
-        let humidity = temperatureToHumidity(temperature)
-        let location = humidityToLocation(humidity)
+        let soil = seedToSoil.destinationFromSource(seed)
+        let fertilizer = soilToFertilizer.destinationFromSource(soil)
+        let water = fertilizerToWater.destinationFromSource(fertilizer)
+        let light = waterToLight.destinationFromSource(water)
+        let temperature = lightToTemperature.destinationFromSource(light)
+        let humidity = temperatureToHumidity.destinationFromSource(temperature)
+        let location = humidityToLocation.destinationFromSource(humidity)
         return location
-    }
-
-    func seedToSoil(_ seed: Int) -> Int {
-        return destinationFromSource(map: "seed-to-soil", source: seed)
-    }
-
-    func soilToFertilizer(_ soil: Int) -> Int {
-        return destinationFromSource(map: "soil-to-fertilizer", source: soil)
-    }
-
-    func fertilizerToWater(_ fertilizer: Int) -> Int {
-        return destinationFromSource(map: "fertilizer-to-water", source: fertilizer)
-    }
-
-    func waterToLight(_ water: Int) -> Int {
-        return destinationFromSource(map: "water-to-light", source: water)
-    }
-
-    func lightToTemperature(_ light: Int) -> Int {
-        return destinationFromSource(map: "light-to-temperature", source: light)
-    }
-
-    func temperatureToHumidity(_ temperature: Int) -> Int {
-        return destinationFromSource(map: "temperature-to-humidity", source: temperature)
-    }
-
-    func humidityToLocation(_ humidity: Int) -> Int {
-        return destinationFromSource(map: "humidity-to-location", source: humidity)
-    }
-
-    func destinationFromSource(map: String, source: Int) -> Int {
-        guard let map = maps.first(where: { $0.name == map }) else { return 0 }
-        return map.destinationFromSource(source)
     }
 }
 
 struct Map: Equatable {
     let name: String
     let entries: [MapEntry]
+
+    init(name: String, entries: [MapEntry]) {
+        self.name = name
+        self.entries = entries.sorted { $0.srcRange.startIndex < $1.srcRange.startIndex }
+    }
 }
 
 extension Map {
     func destinationFromSource(_ source: Int) -> Int {
-        for entry in entries {
-            if let dest = entry.destinationFromSource(source) {
-                return dest
-            }
+        guard
+            let entry = entries.binarySearch(where: {
+                if $0.srcRange.contains(source) {
+                    return 0
+                }
+
+                if $0.srcRange.lowerBound > source {
+                    return -1
+                }
+
+                return 1
+            })
+        else {
+            return source
         }
-        return source
+        return entry.destinationFromSource(source)!
     }
 }
 
 struct MapEntry: Equatable {
-    let dstRange: Range<Int>
     let srcRange: Range<Int>
-}
-
-extension MapEntry {
-    func destinationFromSource(_ source: Int) -> Int? {
-        guard let index = srcRange.firstIndex(of: source) else { return nil }
-        let offset = index - srcRange.startIndex
-        return dstRange[dstRange.index(dstRange.startIndex, offsetBy: offset)]
-    }
+    let dstOffset: Int
 }
 
 extension MapEntry {
     init(dstRangeStart: Int, srcRangeStart: Int, rangeLength: Int) {
-        dstRange = dstRangeStart ..< dstRangeStart + rangeLength
         srcRange = srcRangeStart ..< srcRangeStart + rangeLength
+        dstOffset = dstRangeStart - srcRangeStart
+    }
+}
+
+extension MapEntry {
+    func destinationFromSource(_ source: Int) -> Int? {
+        guard source >= srcRange.startIndex, source < srcRange.endIndex else { return nil }
+        return source + dstOffset
+    }
+}
+
+extension MapEntry: Comparable {
+    static func < (lhs: MapEntry, rhs: MapEntry) -> Bool {
+        return lhs.srcRange.lowerBound < rhs.srcRange.lowerBound
     }
 }
 
@@ -186,5 +209,25 @@ struct MapEntryParser: Parser {
             " "
             Int.parser()
         }
+    }
+}
+
+extension RandomAccessCollection where Element: Comparable {
+    func binarySearch(where predicate: (Element) -> Int) -> Element? {
+        var low = startIndex
+        var high = index(before: endIndex)
+        while low <= high {
+            let mid = index(low, offsetBy: distance(from: low, to: high) / 2)
+            let value = predicate(self[mid])
+            if value == 0 {
+                return self[mid]
+            }
+            if value < 0 {
+                high = index(before: mid)
+            } else {
+                low = index(after: mid)
+            }
+        }
+        return nil
     }
 }
