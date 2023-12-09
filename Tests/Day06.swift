@@ -17,7 +17,7 @@ final class Day06Tests: XCTestCase {
 
     func testPart2() async throws {
         let actual = try await Day06(data: testData).part2()
-        let expected = 0
+        let expected = 71503
         XCTAssertNoDifference(expected, actual)
     }
 }
